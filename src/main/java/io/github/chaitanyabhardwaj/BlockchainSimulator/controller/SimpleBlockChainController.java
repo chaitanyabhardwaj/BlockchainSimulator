@@ -24,7 +24,7 @@ public class SimpleBlockChainController {
         }
         else {
             System.out.println("Initial block created.");
-            System.out.println(block.toString());
+            System.out.println(block);
         }
     }
 
@@ -44,7 +44,7 @@ public class SimpleBlockChainController {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         Block block = optionalBlock.get();
         System.out.println("Mining completed! Below is the mined block.");
-        System.out.println(block.toString());
+        System.out.println(block);
         System.out.println("Adding block to the Blockchain.");
         blockChain.push(block);
         return new ResponseEntity<>(block, HttpStatus.OK);

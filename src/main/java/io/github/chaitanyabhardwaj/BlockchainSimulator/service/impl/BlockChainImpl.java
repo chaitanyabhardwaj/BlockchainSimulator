@@ -25,7 +25,7 @@ public class BlockChainImpl implements BlockChain {
 
     final private Predicate<String> VALID_HASH;
 
-    final public static int REQUIRED_TRAILING_ZEROS = 3;
+    final public static int REQUIRED_TRAILING_ZEROS = 5;
 
     final public static String PREVIOUS_BLOCK_NULL = "0";
 
@@ -97,10 +97,10 @@ public class BlockChainImpl implements BlockChain {
             prevBlock = prevBlockOptional.get();
         }
         long currentIndex = prevBlock.getIndex() + 1;
-        while(!VALID_HASH.test(hash = getHash(prevBlock.getNonce(), prevBlock.getIndex(), nonce, currentIndex, prevBlock.getData())))
+        while(!VALID_HASH.test(hash = getHash(prevBlock.getNonce(), prevBlock.getIndex(), prevHash, nonce, currentIndex, prevBlock.getData())))
             nonce = nonceGenerator.get(nonce);
         Block block = new Block(currentIndex, nonce, prevHash, hash, data);
-        System.out.println("Mined : \n" + block.toString());
+        System.out.println("Mined : \n" + block);
         return Optional.of(block);
     }
 
@@ -114,7 +114,7 @@ public class BlockChainImpl implements BlockChain {
         Optional<Block> prevBlockOptional = get(block.getPrevHash());
         if(prevBlockOptional.isEmpty()) return false;
         Block prevBlock = prevBlockOptional.get();
-        String currHash = getHash(prevBlock.getNonce(), prevBlock.getIndex(), block.getNonce(), block.getIndex(), prevBlock.getData());
+        String currHash = getHash(prevBlock.getNonce(), prevBlock.getIndex(), prevBlock.getHash(), block.getNonce(), block.getIndex(), prevBlock.getData());
         return currHash.equalsIgnoreCase(block.getHash());
     }
 
@@ -164,7 +164,7 @@ public class BlockChainImpl implements BlockChain {
         this.encoder = encoder;
     }
 
-    private String getHash(long prevNonce, long prevIndex, long currentNonce, long currentIndex, String data) {
-        return encoder.encode((prevNonce + (prevIndex * 3 - currentIndex * 3) - currentNonce) + data);
+    private String getHash(long prevNonce, long prevIndex, String prevHash, long currentNonce, long currentIndex, String data) {
+        return encoder.encode(prevHash + (prevNonce + (prevIndex * 3 - currentIndex * 3) - currentNonce) + data);
     }
 }
