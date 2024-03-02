@@ -4,6 +4,7 @@ import io.github.chaitanyabhardwaj.BlockchainSimulator.model.Block;
 import io.github.chaitanyabhardwaj.BlockchainSimulator.service.BlockChain;
 import io.github.chaitanyabhardwaj.BlockchainSimulator.service.NonceGenerator;
 import io.github.chaitanyabhardwaj.BlockchainSimulator.util.Encoder;
+import io.github.chaitanyabhardwaj.BlockchainSimulator.util.LOG;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
@@ -97,9 +98,12 @@ public class BlockChainImpl implements BlockChain {
             prevBlock = prevBlockOptional.get();
         }
         long currentIndex = prevBlock.getIndex() + 1;
+        LOG.append(currentIndex, "Mining with input[Prev Hash = " + prevHash + ", Data = " + data + ", Initial nonce = " + seed + "]\n");
         while(!VALID_HASH.test(hash = getHash(prevBlock.getNonce(), prevBlock.getIndex(), prevHash, nonce, currentIndex, prevBlock.getData())))
             nonce = nonceGenerator.get(nonce);
+        LOG.append(currentIndex, "Valid nonce mapped for hash\n");
         Block block = new Block(currentIndex, nonce, prevHash, hash, data);
+        LOG.append(currentIndex, "Mined: " + block + "\n");
         System.out.println("Mined : \n" + block);
         return Optional.of(block);
     }

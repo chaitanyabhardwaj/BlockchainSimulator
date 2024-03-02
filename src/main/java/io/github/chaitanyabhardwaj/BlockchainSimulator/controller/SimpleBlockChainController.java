@@ -1,7 +1,9 @@
 package io.github.chaitanyabhardwaj.BlockchainSimulator.controller;
 
 import io.github.chaitanyabhardwaj.BlockchainSimulator.model.Block;
+import io.github.chaitanyabhardwaj.BlockchainSimulator.model.Data;
 import io.github.chaitanyabhardwaj.BlockchainSimulator.service.BlockChain;
+import io.github.chaitanyabhardwaj.BlockchainSimulator.util.LOG;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -34,8 +36,13 @@ public class SimpleBlockChainController {
     }
 
     @PostMapping("/mine")
-    public ResponseEntity<Block> mineBlock(@RequestBody Map<String, String> json) {
+    public ResponseEntity<Data> mineBlock(@RequestBody Map<String, String> json) {
         System.out.println("Mining started!");
+        Data dataModel = new Data();
+        Block lastBlock = blockChain.getTop();
+        long currentIndex = lastBlock.getIndex() + 1;
+        LOG.init(currentIndex);
+        LOG.append(currentIndex, "Mining started\n");
         if(!json.containsKey("data"))
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         String data = json.get("data");
@@ -44,10 +51,15 @@ public class SimpleBlockChainController {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         Block block = optionalBlock.get();
         System.out.println("Mining completed! Below is the mined block.");
+        LOG.append(currentIndex, "Mining completed!\n");
         System.out.println(block);
         System.out.println("Adding block to the Blockchain.");
-        blockChain.push(block);
-        return new ResponseEntity<>(block, HttpStatus.OK);
+        boolean pushed = blockChain.push(block);
+        if(pushed)
+            LOG.append(currentIndex, "Block added to the Blockchain!\n");
+        dataModel.setBlock(block);
+        dataModel.setLogs(LOG.compile(currentIndex));
+        return new ResponseEntity<>(dataModel, HttpStatus.OK);
     }
 
     @GetMapping("/getall")
