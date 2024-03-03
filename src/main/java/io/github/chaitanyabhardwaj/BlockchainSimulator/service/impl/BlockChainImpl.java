@@ -20,7 +20,7 @@ import java.util.function.Predicate;
 @Primary
 public class BlockChainImpl implements BlockChain {
 
-    final private Map<String, Block> CHAIN = new HashMap<>();
+    final private Map<String, Block> CHAIN = new LinkedHashMap<>();
 
     private Encoder encoder;
 
@@ -101,7 +101,7 @@ public class BlockChainImpl implements BlockChain {
         LOG.append(currentIndex, "Mining with input[Prev Hash = " + prevHash + ", Data = " + data + ", Initial nonce = " + seed + "]\n");
         while(!VALID_HASH.test(hash = getHash(prevBlock.getNonce(), prevBlock.getIndex(), prevHash, nonce, currentIndex, prevBlock.getData())))
             nonce = nonceGenerator.get(nonce);
-        LOG.append(currentIndex, "Valid nonce mapped for hash\n");
+        LOG.append(currentIndex, "Found valid hash at nonce = " + nonce + "\n");
         Block block = new Block(currentIndex, nonce, prevHash, hash, data);
         LOG.append(currentIndex, "Mined: " + block + "\n");
         System.out.println("Mined : \n" + block);

@@ -56,7 +56,7 @@ public class SimpleBlockChainController {
         System.out.println("Adding block to the Blockchain.");
         boolean pushed = blockChain.push(block);
         if(pushed)
-            LOG.append(currentIndex, "Block added to the Blockchain!\n");
+            LOG.append(currentIndex, "Block added to the Blockchain at index = " + currentIndex + "\n");
         dataModel.setBlock(block);
         dataModel.setLogs(LOG.compile(currentIndex));
         return new ResponseEntity<>(dataModel, HttpStatus.OK);
