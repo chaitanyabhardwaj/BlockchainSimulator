@@ -20,7 +20,8 @@ import java.util.function.Predicate;
 @Primary
 public class BlockChainImpl implements BlockChain {
 
-    final private Map<String, Block> CHAIN = new LinkedHashMap<>();
+    final private Set<String> CHAIN_HASH = new HashSet<>();
+    final private Map<Long, Block> CHAIN_INDEX = new LinkedHashMap<>();
 
     private Encoder encoder;
 
@@ -28,9 +29,10 @@ public class BlockChainImpl implements BlockChain {
 
     final public static int REQUIRED_TRAILING_ZEROS = 5;
 
-    final public static String PREVIOUS_BLOCK_NULL = "0";
-
     private Block topBlock;
+
+    //create dummy
+    final private Block DUMMY_BLOCK = new Block(-1, 0, "0", "0", false, null);
 
     public BlockChainImpl() {
         VALID_HASH = (hash -> {
@@ -44,7 +46,7 @@ public class BlockChainImpl implements BlockChain {
 
     @Override
     public Block init(String data) {
-        Optional<Block> optionalBlock = mine(PREVIOUS_BLOCK_NULL, data);
+        Optional<Block> optionalBlock = mine(-1, data);
         if(optionalBlock.isPresent()) {
             Block b = optionalBlock.get();
             if(push(b))
@@ -56,11 +58,16 @@ public class BlockChainImpl implements BlockChain {
     @Override
     public boolean push(Block block) {
         if(isValid(block)) {
-            if(CHAIN.containsKey(block.getHash())) {
-                System.out.println("COLLISION!!!! AT: " + block.getHash());
+            if(CHAIN_HASH.contains(block.getHash())) {
+                System.out.println("COLLISION!!!! AT hash: " + block.getHash());
                 return false;
             }
-            CHAIN.put(block.getHash(), block);
+            if(CHAIN_INDEX.containsKey(block.getIndex())) {
+                System.out.println("COLLISION!!!! AT index: " + block.getIndex());
+                return false;
+            }
+            CHAIN_HASH.add(block.getHash());
+            CHAIN_INDEX.put(block.getIndex(), block);
             topBlock = block;
             return true;
         }
@@ -73,36 +80,36 @@ public class BlockChainImpl implements BlockChain {
     }
 
     @Override
-    public Optional<Block> mine(String prevHash, String data) {
+    public Optional<Block> mine(long prevIndex, String data) {
         NonceGenerator nonceGenerator = (seed -> seed + 1);
-        return mine(prevHash, data, nonceGenerator, 0);
+        return mine(prevIndex, data, nonceGenerator, 0);
     }
 
     @Override
-    public Optional<Block> mine(String prevHash, String data, NonceGenerator nonceGenerator, long seed) {
-        System.out.println("Mining with input[" + prevHash + ", " + data + ", " + seed);
+    public Optional<Block> mine(long prevIndex, String data, NonceGenerator nonceGenerator, long seed) {
+        System.out.println("Mining with input[" + prevIndex + ", " + data + ", " + seed);
         long nonce = seed;
         String hash;
         Block prevBlock;
         //hash function = prevNonce + (prevIndex * 7 - currentIndex * 7) - currentNonce * 2
         //check if block is initial node
-        if(prevHash.equalsIgnoreCase(PREVIOUS_BLOCK_NULL)) {
+        if(prevIndex < 0) {
             //create dummy prevBlock
-            prevBlock = new Block(-1, 0, "0", PREVIOUS_BLOCK_NULL, null);
+            prevBlock = DUMMY_BLOCK;
         }
         else {
-            Optional<Block> prevBlockOptional = get(prevHash);
+            Optional<Block> prevBlockOptional = get(prevIndex);
             if(prevBlockOptional.isEmpty()) {
                 return Optional.empty();
             }
             prevBlock = prevBlockOptional.get();
         }
-        long currentIndex = prevBlock.getIndex() + 1;
-        LOG.append(currentIndex, "Mining with input[Prev Hash = " + prevHash + ", Data = " + data + ", Initial nonce = " + seed + "]\n");
-        while(!VALID_HASH.test(hash = getHash(prevBlock.getNonce(), prevBlock.getIndex(), prevHash, nonce, currentIndex, prevBlock.getData())))
+        long currentIndex = prevIndex + 1;
+        LOG.append(currentIndex, "Mining with input[Prev Index = " + prevIndex + ", Data = " + data + ", Initial nonce = " + seed + "]\n");
+        while(!VALID_HASH.test(hash = getHash(prevBlock.getNonce(), prevIndex, prevBlock.getHash(), nonce, currentIndex, data)))
             nonce = nonceGenerator.get(nonce);
         LOG.append(currentIndex, "Found valid hash at nonce = " + nonce + "\n");
-        Block block = new Block(currentIndex, nonce, prevHash, hash, data);
+        Block block = new Block(currentIndex, nonce, prevBlock.getHash(), hash, true, data);
         LOG.append(currentIndex, "Mined: " + block + "\n");
         System.out.println("Mined : \n" + block);
         return Optional.of(block);
@@ -115,50 +122,71 @@ public class BlockChainImpl implements BlockChain {
         }
         if(block.getHash().length() != 64) return false;
         if(!VALID_HASH.test(block.getHash())) return false;
-        Optional<Block> prevBlockOptional = get(block.getPrevHash());
+        Optional<Block> prevBlockOptional = get(block.getIndex() - 1);
         if(prevBlockOptional.isEmpty()) return false;
         Block prevBlock = prevBlockOptional.get();
-        String currHash = getHash(prevBlock.getNonce(), prevBlock.getIndex(), prevBlock.getHash(), block.getNonce(), block.getIndex(), prevBlock.getData());
+        String currHash = getHash(prevBlock.getNonce(), prevBlock.getIndex(), prevBlock.getHash(), block.getNonce(), block.getIndex(), block.getData());
         return currHash.equalsIgnoreCase(block.getHash());
     }
 
     @Override
-    public Optional<Block> validateChain() {
-        return null;
+    public void validateChain(long index) {
+        Optional<Block> optBlock = get(index);
+        if(optBlock.isPresent()) {
+            Block currBlock = optBlock.get();
+            Optional<Block> prevBlockOptional = get(index - 1);
+            Block prevBlock;
+            if(prevBlockOptional.isEmpty()) prevBlock = DUMMY_BLOCK;
+            prevBlock = prevBlockOptional.get();
+            String newHash = getHash(prevBlock.getNonce(), prevBlock.getIndex(), prevBlock.getHash(), currBlock.getNonce(), currBlock.getIndex(), currBlock.getData());
+            CHAIN_HASH.remove(currBlock.getHash());
+            CHAIN_HASH.add(newHash);
+            currBlock.setPrevHash(prevBlock.getHash());
+            currBlock.setHash(newHash);
+            currBlock.setValid(isValid(currBlock));
+            CHAIN_INDEX.put(index, currBlock);
+            validateChain(index + 1);
+        }
     }
 
     @Override
     public Optional<Block> get(long index) {
-        return Optional.empty();
-    }
-
-    @Override
-    public Optional<Block> get(String hash) {
-        if(CHAIN.containsKey(hash))
-            return Optional.of(CHAIN.get(hash));
+        if(CHAIN_INDEX.containsKey(index))
+            return Optional.of(CHAIN_INDEX.get(index));
         return Optional.empty();
     }
 
     @Override
     public List<Block> getAll() {
         List<Block> list = new ArrayList<>();
-        for (String hash: CHAIN.keySet()) {
-            list.add(CHAIN.get(hash));
+        for (long index: CHAIN_INDEX.keySet()) {
+            list.add(CHAIN_INDEX.get(index));
         }
         return list;
     }
 
     @Override
     public boolean setData(long index, String data) {
-        return false;
-    }
-
-    @Override
-    public boolean setData(String hash, String data) {
-        Optional<Block> blockOptional = get(hash);
+        Optional<Block> blockOptional = get(index);
         if(blockOptional.isEmpty()) return false;
         Block block = blockOptional.get();
         block.setData(data);
+        //calculate new hash
+        Block prevBlock;
+        if(index <= 0)
+            prevBlock = DUMMY_BLOCK;
+        else {
+            Optional<Block> prevBlockOptional = get(block.getIndex() - 1);
+            if(prevBlockOptional.isEmpty()) return false;
+            prevBlock = prevBlockOptional.get();
+        }
+        String newHash = getHash(prevBlock.getNonce(), prevBlock.getIndex(), prevBlock.getHash(), block.getNonce(), block.getIndex(), data);
+        CHAIN_HASH.remove(block.getHash());
+        CHAIN_HASH.add(newHash);
+        block.setHash(newHash);
+        block.setValid(isValid(block));
+        CHAIN_INDEX.put(index, block);
+        validateChain(index + 1);
         return true;
     }
 

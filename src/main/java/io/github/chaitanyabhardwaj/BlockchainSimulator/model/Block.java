@@ -12,6 +12,8 @@ public class Block {
     private String prevHash;
     private String hash;
     private String data;
+
+    private boolean isValid;
     private final Instant CREATED_AT;
 
     //no args constructor
@@ -19,12 +21,13 @@ public class Block {
         CREATED_AT = Instant.now();
     }
 
-    public Block(long index, long nonce, String prevHash, String hash, String data) {
+    public Block(long index, long nonce, String prevHash, String hash, boolean isValid, String data) {
         this.index = index;
         this.nonce = nonce;
         this.prevHash = prevHash;
         this.hash = hash;
         this.data = data;
+        this.isValid = isValid;
         CREATED_AT = Instant.now();
     }
 
@@ -68,6 +71,14 @@ public class Block {
         this.data = data;
     }
 
+    public boolean isValid() {
+        return isValid;
+    }
+
+    public void setValid(boolean valid) {
+        isValid = valid;
+    }
+
     public Instant getCREATED_AT() {
         return CREATED_AT;
     }
@@ -77,12 +88,12 @@ public class Block {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Block block = (Block) o;
-        return index == block.index && nonce == block.nonce && Objects.equals(prevHash, block.prevHash) && Objects.equals(hash, block.hash) && Objects.equals(data, block.data) && Objects.equals(CREATED_AT, block.CREATED_AT);
+        return index == block.index && nonce == block.nonce && isValid == block.isValid && Objects.equals(prevHash, block.prevHash) && Objects.equals(hash, block.hash) && Objects.equals(data, block.data) && Objects.equals(CREATED_AT, block.CREATED_AT);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(index, nonce, prevHash, hash, data, CREATED_AT);
+        return Objects.hash(index, nonce, prevHash, hash, data, isValid, CREATED_AT);
     }
 
     @Override
@@ -93,6 +104,7 @@ public class Block {
                 ", prevHash='" + prevHash + '\'' +
                 ", hash='" + hash + '\'' +
                 ", data='" + data + '\'' +
+                ", isValid=" + isValid +
                 ", CREATED_AT=" + CREATED_AT +
                 '}';
     }

@@ -46,7 +46,7 @@ public class SimpleBlockChainController {
         if(!json.containsKey("data"))
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         String data = json.get("data");
-        Optional<Block> optionalBlock = blockChain.mine(blockChain.getTop().getHash(), data);
+        Optional<Block> optionalBlock = blockChain.mine(currentIndex - 1, data);
         if(optionalBlock.isEmpty())
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         Block block = optionalBlock.get();
@@ -69,4 +69,24 @@ public class SimpleBlockChainController {
             return new ResponseEntity<>(list, HttpStatus.OK);
         return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+
+    @PostMapping("/update")
+    public ResponseEntity<Block> update(@RequestBody Map<String, String> json) {
+        System.out.print("Updating - ");
+        if(!(json.containsKey("data") && json.containsKey("index")))
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        long id = Long.parseLong(json.get("index"));
+        System.out.println(id + " index");
+        if(blockChain.setData(id, json.get("data"))) {
+            return new ResponseEntity<>(blockChain.get(id).get(), HttpStatus.OK);
+        }
+        return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @PostMapping("/validateChain")
+    public ResponseEntity<List<Block>> valdiateChain() {
+        blockChain.validateChain(0);
+        return new ResponseEntity<>(blockChain.getAll(), HttpStatus.OK);
+    }
+
 }

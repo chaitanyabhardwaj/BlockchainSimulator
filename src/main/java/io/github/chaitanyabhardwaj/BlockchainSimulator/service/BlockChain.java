@@ -18,13 +18,13 @@ public interface BlockChain {
     *Tries to create and add a new block in the current blockchain by providing PoW.
     *This does not guarantee the addition of block in the blockchain.
     */
-    Optional<Block> mine(String prevHash, String data);
+    Optional<Block> mine(long prevIndex, String data);
 
     /*
      *Tries to create and add a new block in the current blockchain by providing PoW.
      *This does not guarantee the addition of block in the blockchain.
      */
-    Optional<Block> mine(String prevHash, String data, NonceGenerator nonceGenerator, long seed);
+    Optional<Block> mine(long prevIndex, String data, NonceGenerator nonceGenerator, long seed);
 
     /*
     *Validates a block. The block should fulfil all requirements
@@ -32,19 +32,13 @@ public interface BlockChain {
     */
     boolean isValid(Block block);
 
-    Optional<Block> validateChain();
+    void validateChain(long index);
 
     /*Return the block by index.*/
     Optional<Block> get(long index);
 
-    /*Return the block by hash.*/
-    Optional<Block> get(String hash);
-
     /*Change the data of block by index*/
     boolean setData(long index, String data);
-
-    /*Change the data of block by hash*/
-    boolean setData(String hash, String data);
 
     List<Block> getAll();
 
